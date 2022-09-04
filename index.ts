@@ -15,7 +15,8 @@ type TypescriptStmt =
     | ts.SyntaxKind.ContinueStatement
     | ts.SyntaxKind.VariableStatement
     | ts.SyntaxKind.ExpressionStatement
-    | ts.SyntaxKind.Block;
+    | ts.SyntaxKind.Block
+    | ts.SyntaxKind.FunctionDeclaration;
 
 const CppStatement = to_enum<CPlusPlus.Statement>();
 const CppExpression = to_enum<CPlusPlus.Expression>();
@@ -30,7 +31,7 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
         return CppStatement.SimpleDecl({
             decl_specifier_seq: {
                 type_specifier: CppType.qualified({
-                    typename: decl.type!.getText(),
+                    typename: decl.type?.getText() ?? "int",
                 })
             },
             init_declarator_list: [
@@ -174,6 +175,31 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
 
                 return visitBlock(node);
             },
+            [ts.SyntaxKind.FunctionDeclaration]: () => {
+                if (!ts.isFunctionDeclaration(node))
+                    throw new Error("Something went wrong");
+
+                const return_type = node.type?.getText()!;
+
+                return CppStatement.FunctionDecl({
+                    body: visitStmt(node.body!).Compound,
+                    decl_specifier_seq: {
+                        type_specifier: CppType.qualified({ typename: return_type }),
+                    },
+                    declarator: {
+                        noptr_declarator: node.name!.getText()!,
+                        param_list: node.parameters.map((decl) => {
+                            return {
+                                decl_specifier_seq: {
+                                    type_specifier: CppType.qualified({ typename: decl.type!.getText() })
+                                },
+                                declarator: decl.name.getText(),
+                                initializer: decl.initializer && visitExpr(decl.initializer),
+                            }
+                        })
+                    } 
+                })
+            },
             _: () => {
                 throw new Error(`Unsupported syntax kind: ${node.kind}`)
             }
@@ -193,5 +219,6 @@ fileNames.forEach(fileName => {
         true,
     )
 
-    console.log(JSON.stringify(transpile(sourceFile), undefined, 4));
+    const result = transpile(sourceFile);
+    console.log(CPlusPlus.getSourceCode(result));
 })
