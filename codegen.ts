@@ -2,7 +2,6 @@ import { Enum } from 'ts-features';
 
 export namespace CPlusPlus {
     export type SourceFile = (Enum<Macros> | Enum<Statement>)[];
-
     export interface Macros {
         Include: {
             isBrace?: boolean,

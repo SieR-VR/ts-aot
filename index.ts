@@ -14,14 +14,12 @@ type TypescriptStmt =
     | ts.SyntaxKind.ReturnStatement
     | ts.SyntaxKind.ContinueStatement
     | ts.SyntaxKind.VariableStatement
-    | ts.SyntaxKind.ExpressionStatement;
-
+    | ts.SyntaxKind.ExpressionStatement
+    | ts.SyntaxKind.Block;
 
 const CppStatement = to_enum<CPlusPlus.Statement>();
 const CppExpression = to_enum<CPlusPlus.Expression>();
 const CppType = to_enum<CPlusPlus.Type>();
-
-type some = ts.ForInitializer
 
 function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
     const visitExpr: (node: ts.Expression) => Enum<CPlusPlus.Expression> = (node: ts.Expression) => {
@@ -48,7 +46,7 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
         return CppStatement.SimpleDecl({
             decl_specifier_seq: {
                 type_specifier: CppType.qualified({
-                    typename: decls.declarations[0].type!.getText(),
+                    typename: decls.declarations[0].type?.getText() ?? "int",
                 }),
             },
             init_declarator_list: decls.declarations.map((decl) => {
@@ -170,6 +168,15 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
                     expr: visitExpr(node.expression),
                 });
             },
+            [ts.SyntaxKind.Block]: () => {
+                if (!ts.isBlock(node))
+                    throw new Error("Something went wrong");
+
+                return visitBlock(node);
+            },
+            _: () => {
+                throw new Error(`Unsupported syntax kind: ${node.kind}`)
+            }
         })
     }
 
@@ -186,5 +193,5 @@ fileNames.forEach(fileName => {
         true,
     )
 
-    console.log(transpile(sourceFile));
+    console.log(JSON.stringify(transpile(sourceFile), undefined, 4));
 })
