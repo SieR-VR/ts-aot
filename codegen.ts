@@ -51,30 +51,23 @@ export namespace CPlusPlus {
                 noptr_declarator: NoPtrDeclarator,
                 param_list: Param[],
             },
-            body: Enum<Statement>["Compound"]
+            body: Enum<Pick<Statement, "Compound">>
             | "delete"
             | "default"
         },
         TemplateDecl: {
             param_list: Enum<TemplateParam>[],
-            decl: Enum<Statement>["ClassDecl"]
-            | Enum<Statement>["FunctionDecl"]
+            decl: Enum<Pick<Statement, "ClassDecl" | "FunctionDecl">>,
         },
         NamespaceDecl: {
             ns_name: string,
-            decls: Enum<Statement>["TemplateDecl"]
-            | Enum<Statement>["FunctionDecl"]
-            | Enum<Statement>["NamespaceDecl"],
+            decls: Enum<Pick<Statement, "ClassDecl" | "FunctionDecl" | "NamespaceDecl" | "TemplateDecl">>,
         },
         ClassDecl: {
             key: "class" | "struct" | "union",
             name: string,
-            base_clause: string,
-            member_specification: Enum<Statement>["SimpleDecl"]
-            | Enum<Statement>["FunctionDecl"]
-            | Enum<Statement>["TemplateDecl"]
-            | Enum<Statement>["EnumDecl"]
-            | Enum<Statement>["TypedefDecl"]
+            base_clause?: string,
+            member_specification: Enum<Pick<Statement, "SimpleDecl" | "FunctionDecl" | "TemplateDecl" | "EnumDecl" | "TypedefDecl">>,
         },
         EnumDecl: {
             key: "enum" | "enum class" | "enum struct",
@@ -90,9 +83,9 @@ export namespace CPlusPlus {
             init_declarator_list: InitDeclator[],
         },
         TryBlock: {
-            try_stmt: Enum<Statement>["Compound"],
+            try_stmt: Enum<Pick<Statement, "Compound">>,
             catch_result: Param,
-            catch_stmt: Enum<Statement>["Compound"],
+            catch_stmt: Enum<Pick<Statement, "Compound">>,
         },
     }
 
@@ -304,7 +297,7 @@ export namespace CPlusPlus {
                 if (body === 'default' || body === 'delete')
                     throw new Error("Still not support class function identifier");
                     
-                return `${getTypeName(decl_specifier_seq.type_specifier)} ${declarator.noptr_declarator}(${args})\n${getSourceFromStmt({ Compound: body })}`;
+                return `${getTypeName(decl_specifier_seq.type_specifier)} ${declarator.noptr_declarator}(${args})\n${getSourceFromStmt(body)}`;
             },
             TemplateDecl: ({
                 param_list,

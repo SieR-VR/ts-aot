@@ -3,3 +3,9 @@ function main() {
         const k = 0;
     }
 }
+
+class TestClass {
+    constructor() {
+        
+    }
+}

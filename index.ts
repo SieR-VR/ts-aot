@@ -16,7 +16,8 @@ type TypescriptStmt =
     | ts.SyntaxKind.VariableStatement
     | ts.SyntaxKind.ExpressionStatement
     | ts.SyntaxKind.Block
-    | ts.SyntaxKind.FunctionDeclaration;
+    | ts.SyntaxKind.FunctionDeclaration
+    | ts.SyntaxKind.ClassDeclaration;
 
 const CppStatement = to_enum<CPlusPlus.Statement>();
 const CppExpression = to_enum<CPlusPlus.Expression>();
@@ -25,6 +26,10 @@ const CppType = to_enum<CPlusPlus.Type>();
 function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
     const visitExpr: (node: ts.Expression) => Enum<CPlusPlus.Expression> = (node: ts.Expression) => {
         return {} as Enum<CPlusPlus.Expression>
+    }
+
+    const visitMemberDecl = (decl: ts.ClassElement) => {
+        decl.
     }
 
     const visitVariableDecl = (decl: ts.VariableDeclaration) => {
@@ -59,7 +64,7 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
         });
     }
 
-    const visitBlock: (node: ts.Block) => Enum<CPlusPlus.Statement> = (node: ts.Block) => {
+    const visitBlock: (node: ts.Block) => Enum<Pick<CPlusPlus.Statement, "Compound">> = (node: ts.Block) => {
         return CppStatement.Compound({
             stmts: node.statements.map(visitStmt),
         });
@@ -110,12 +115,12 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
                 const variableDecl = visitVariableDecl(node.catchClause!.variableDeclaration!);
 
                 return CppStatement.TryBlock({
-                    try_stmt: visitStmt(node.tryBlock) as unknown as Enum<CPlusPlus.Statement>["Compound"],
+                    try_stmt: visitBlock(node.tryBlock),
                     catch_result: {
                         decl_specifier_seq: variableDecl.SimpleDecl.decl_specifier_seq,
                         ...variableDecl.SimpleDecl.init_declarator_list[0]
                     },
-                    catch_stmt: visitBlock(node.catchClause!.block).Compound,
+                    catch_stmt: visitBlock(node.catchClause!.block),
                 })
             },
             [ts.SyntaxKind.ThrowStatement]: () => {
@@ -182,7 +187,7 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
                 const return_type = node.type?.getText()!;
 
                 return CppStatement.FunctionDecl({
-                    body: visitStmt(node.body!).Compound,
+                    body: visitBlock(node.body!),
                     decl_specifier_seq: {
                         type_specifier: CppType.qualified({ typename: return_type }),
                     },
@@ -198,6 +203,19 @@ function transpile(sourceFile: ts.SourceFile): CPlusPlus.SourceFile {
                             }
                         })
                     } 
+                })
+            },
+            [ts.SyntaxKind.ClassDeclaration]: () => {
+                if (!ts.isClassDeclaration(node))
+                    throw new Error("Something went wrong");
+
+                return CppStatement.ClassDecl({
+                    key: "class",
+                    base_clause: node.heritageClauses!.map((clause) => clause.getText())
+                        .join(", "),
+                    member_specification: node.members.map((elem) => {
+                        elem.
+                    })
                 })
             },
             _: () => {
